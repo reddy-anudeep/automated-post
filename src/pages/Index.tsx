@@ -9,7 +9,9 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('Auth state:', { loading, isAuthenticated });
     if (!loading && !isAuthenticated) {
+      console.log('Redirecting to auth');
       navigate('/auth');
     }
   }, [isAuthenticated, loading, navigate]);

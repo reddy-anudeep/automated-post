@@ -28,6 +28,8 @@ import ThemeToggle from "@/components/ThemeToggle";
 import ScrollReveal from "@/components/ScrollReveal";
 import useLinkedInAuth from "@/hooks/useLinkedInAuth";
 import useEmailService from "@/hooks/useEmailService";
+import { useAuth } from "@/hooks/useAuth";
+import { LogOut } from "lucide-react";
 
 const topics = [
   { id: "technology", label: "Technology", icon: "💻", color: "from-blue-500 to-cyan-500" },
@@ -55,6 +57,9 @@ export default function LinkedInPostGenerator() {
   const [emailAddress, setEmailAddress] = useState("");
   const [showEmailInput, setShowEmailInput] = useState(false);
   const { toast } = useToast();
+
+  // Auth Hook
+  const { user, signOut } = useAuth();
 
   // LinkedIn Auth Hook
   const { 
@@ -185,8 +190,24 @@ export default function LinkedInPostGenerator() {
 
   return (
     <div className="min-h-screen bg-gradient-hero relative overflow-hidden">
-      {/* Theme Toggle */}
-      <ThemeToggle />
+      {/* User Profile & Theme Toggle */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-3">
+        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card/50 backdrop-blur-sm border border-border/50">
+          <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-glow rounded-full flex items-center justify-center">
+            <User className="h-4 w-4 text-primary-foreground" />
+          </div>
+          <span className="text-sm font-medium">{user?.email?.split('@')[0]}</span>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={signOut}
+            className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
+        <ThemeToggle />
+      </div>
       
       {/* Animated Background Elements */}
       <div className="hero-bg absolute inset-0 opacity-30">

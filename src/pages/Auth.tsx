@@ -12,10 +12,15 @@ const Auth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('Auth component mounted');
+    
     // Check if user is already authenticated
     const checkUser = async () => {
+      console.log('Checking existing session...');
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('Existing session:', session);
       if (session) {
+        console.log('User already authenticated, navigating to /');
         navigate('/');
       }
     };
@@ -23,7 +28,9 @@ const Auth = () => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change in Auth component:', event, session);
       if (event === 'SIGNED_IN' && session) {
+        console.log('User signed in, navigating to /');
         toast({
           title: "Welcome!",
           description: "Successfully signed in to your account.",

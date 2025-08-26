@@ -3,33 +3,27 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   Sparkles, 
   RefreshCw, 
   Copy, 
-  Send, 
   User, 
   MessageCircle, 
   Heart, 
   Share, 
   MoreHorizontal,
-  Mail,
-  Linkedin,
   Zap,
   Wand2,
   Eye,
   Settings,
-  Globe
+  Globe,
+  FileText,
+  Edit3
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ThemeToggle from "@/components/ThemeToggle";
 import ScrollReveal from "@/components/ScrollReveal";
-import useLinkedInAuth from "@/hooks/useLinkedInAuth";
-import useEmailService from "@/hooks/useEmailService";
-import { useAuth } from "@/hooks/useAuth";
-import { LogOut } from "lucide-react";
 
 const topics = [
   { id: "technology", label: "Technology", icon: "💻", color: "from-blue-500 to-cyan-500" },
@@ -52,28 +46,10 @@ export default function LinkedInPostGenerator() {
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [generatedPost, setGeneratedPost] = useState("");
   const [customDetails, setCustomDetails] = useState("");
+  const [userContent, setUserContent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [charCount, setCharCount] = useState(0);
-  const [emailAddress, setEmailAddress] = useState("");
-  const [showEmailInput, setShowEmailInput] = useState(false);
   const { toast } = useToast();
-
-  // Auth Hook
-  const { user, signOut } = useAuth();
-
-  // LinkedIn Auth Hook
-  const { 
-    isConnecting, 
-    profile, 
-    accessToken, 
-    initiateAuth, 
-    publishPost, 
-    disconnect, 
-    isConnected 
-  } = useLinkedInAuth();
-
-  // Email Service Hook
-  const { sendPostNotification, isSending } = useEmailService();
 
   // Scroll animations
   useEffect(() => {
@@ -99,10 +75,11 @@ export default function LinkedInPostGenerator() {
   };
 
   const generatePost = async () => {
-    if (selectedTopics.length === 0) {
+    // Check if we have either topics or user content
+    if (selectedTopics.length === 0 && !userContent.trim()) {
       toast({
-        title: "Select Topics",
-        description: "Please select at least one topic to generate a post.",
+        title: "Content Required",
+        description: "Please select topics or provide your own content to generate a post.",
         variant: "destructive"
       });
       return;
@@ -112,12 +89,22 @@ export default function LinkedInPostGenerator() {
     
     // Simulate AI generation with a delay
     setTimeout(() => {
-      const primaryTopic = selectedTopics[0];
-      let post = samplePosts[primaryTopic as keyof typeof samplePosts] || samplePosts.technology;
+      let post = "";
       
-      // If custom details are provided, customize the post
-      if (customDetails.trim()) {
-        post = post.replace(/amazing new framework|AI-powered design tools|first startup/g, customDetails.trim());
+      // If user provided their own content, use that as base
+      if (userContent.trim()) {
+        // Transform user content into a professional LinkedIn post
+        const content = userContent.trim();
+        post = `${content}\n\n${generateHashtags(content, selectedTopics)}`;
+      } else {
+        // Use topic-based generation
+        const primaryTopic = selectedTopics[0];
+        post = samplePosts[primaryTopic as keyof typeof samplePosts] || samplePosts.technology;
+        
+        // If custom details are provided, customize the post
+        if (customDetails.trim()) {
+          post = post.replace(/amazing new framework|AI-powered design tools|first startup/g, customDetails.trim());
+        }
       }
       
       setGeneratedPost(post);
@@ -126,9 +113,42 @@ export default function LinkedInPostGenerator() {
       
       toast({
         title: "Post Generated! 🎉",
-        description: "Your LinkedIn post is ready to review and edit.",
+        description: "Your LinkedIn post is ready to copy and share.",
       });
     }, 2000);
+  };
+
+  const generateHashtags = (content: string, topics: string[]) => {
+    // Generate relevant hashtags based on content and selected topics
+    const hashtagMap: { [key: string]: string[] } = {
+      technology: ["#Technology", "#Innovation", "#WebDevelopment", "#TechTrends"],
+      ai: ["#ArtificialIntelligence", "#AI", "#MachineLearning", "#Innovation"],
+      entrepreneurship: ["#Entrepreneurship", "#StartupLife", "#Business", "#Innovation"],
+      leadership: ["#Leadership", "#Management", "#TeamBuilding", "#ProfessionalGrowth"],
+      career: ["#CareerTips", "#ProfessionalDevelopment", "#CareerGrowth", "#Leadership"],
+      trends: ["#IndustryTrends", "#Business", "#Innovation", "#Technology"],
+      branding: ["#PersonalBranding", "#Marketing", "#Brand", "#ProfessionalGrowth"],
+      projects: ["#ProjectManagement", "#Success", "#Achievement", "#Innovation"]
+    };
+    
+    let hashtags: string[] = [];
+    
+    // Add hashtags from selected topics
+    topics.forEach(topic => {
+      if (hashtagMap[topic]) {
+        hashtags.push(...hashtagMap[topic].slice(0, 2));
+      }
+    });
+    
+    // If no topics selected, add generic professional hashtags
+    if (topics.length === 0) {
+      hashtags = ["#Professional", "#LinkedIn", "#Career", "#Success"];
+    }
+    
+    // Remove duplicates and limit to 4
+    hashtags = [...new Set(hashtags)].slice(0, 4);
+    
+    return hashtags.join(" ");
   };
 
   const handlePostChange = (value: string) => {
@@ -137,75 +157,26 @@ export default function LinkedInPostGenerator() {
   };
 
   const copyToClipboard = () => {
+    if (!generatedPost) {
+      toast({
+        title: "No Content",
+        description: "Please generate a post first.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     navigator.clipboard.writeText(generatedPost);
     toast({
       title: "Copied! 📋",
-      description: "Post copied to clipboard successfully.",
+      description: "Post copied to clipboard. Ready to paste on LinkedIn!",
     });
-  };
-
-  const publishToLinkedIn = async () => {
-    if (!accessToken || !generatedPost) {
-      toast({
-        title: "Unable to Publish",
-        description: !accessToken ? "Please connect to LinkedIn first." : "No post content to publish.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      const result = await publishPost(generatedPost);
-      toast({
-        title: "Published! 🎉",
-        description: "Your post has been published to LinkedIn successfully.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Publish Failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const sendEmailNotification = async () => {
-    if (!emailAddress || !generatedPost) {
-      toast({
-        title: "Email Required",
-        description: "Please enter an email address and generate a post first.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      await sendPostNotification(generatedPost, emailAddress);
-      setShowEmailInput(false);
-      setEmailAddress("");
-    } catch (error) {
-      // Error handled by hook
-    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-hero relative overflow-hidden">
-      {/* User Profile & Theme Toggle */}
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-3">
-        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-card/50 backdrop-blur-sm border border-border/50">
-          <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary-glow rounded-full flex items-center justify-center">
-            <User className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span className="text-sm font-medium">{user?.email?.split('@')[0]}</span>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={signOut}
-            className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
-        </div>
+      {/* Theme Toggle */}
+      <div className="absolute top-4 right-4 z-20">
         <ThemeToggle />
       </div>
       
@@ -230,53 +201,56 @@ export default function LinkedInPostGenerator() {
               Generator
             </h1>
             <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              Create engaging, professional LinkedIn posts that drive engagement and grow your network with AI-powered content generation
+              Create engaging, professional LinkedIn posts from your content or topic selection. Generate, edit, and copy to share instantly.
             </p>
           </div>
         </ScrollReveal>
 
-        {/* Connection Status */}
-        {isConnected && (
-          <ScrollReveal delay={200}>
-            <div className="max-w-md mx-auto mb-8">
-              <Card className="glass-morphism border-primary/20">
-                <CardContent className="flex items-center gap-3 p-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-linkedin-blue to-linkedin-blue-light rounded-full flex items-center justify-center">
-                    <Linkedin className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">Connected to LinkedIn</p>
-                    <p className="text-sm text-muted-foreground">{profile?.name}</p>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={disconnect}>
-                    Disconnect
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </ScrollReveal>
-        )}
-
         <div className="grid lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
           {/* Left Panel - Configuration */}
           <div className="space-y-8">
-            {/* Topic Selection */}
-            <ScrollReveal delay={300}>
+            {/* User Content Input */}
+            <ScrollReveal delay={200}>
               <Card className="card-elevated card-glow">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-2xl">
-                    <Wand2 className="h-6 w-6 text-primary" />
-                    Select Your Topics
+                    <FileText className="h-6 w-6 text-primary" />
+                    Your Content
                   </CardTitle>
-                  <p className="text-muted-foreground">Choose topics that resonate with your expertise and audience</p>
+                  <p className="text-muted-foreground">Paste your content here and we'll turn it into a professional LinkedIn post</p>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
+                  <Textarea
+                    placeholder="Paste your content here... Share your thoughts, achievements, insights, or any content you want to transform into a LinkedIn post."
+                    value={userContent}
+                    onChange={(e) => setUserContent(e.target.value)}
+                    rows={6}
+                    className="resize-none transition-all focus:ring-2 focus:ring-primary/50"
+                  />
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Pro tip: Paste any content - we'll optimize it for LinkedIn and add relevant hashtags
+                  </div>
+                </CardContent>
+              </Card>
+            </ScrollReveal>
+
+            {/* Topic Selection */}
+            <ScrollReveal delay={300}>
+              <Card className="card-elevated">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Wand2 className="h-5 w-5 text-primary" />
+                    Select Topics (Optional)
+                  </CardTitle>
+                  <p className="text-muted-foreground text-sm">Choose topics to generate content or enhance your existing content with relevant hashtags</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3">
                     {topics.map((topic, index) => (
                       <Button
                         key={topic.id}
                         variant={selectedTopics.includes(topic.id) ? "default" : "outline"}
-                        className={`justify-start h-auto p-4 transition-all duration-300 group relative overflow-hidden ${
+                        className={`justify-start h-auto p-3 transition-all duration-300 group relative overflow-hidden text-xs ${
                           selectedTopics.includes(topic.id) 
                             ? `bg-gradient-to-r ${topic.color} text-white hover:scale-105 shadow-glow` 
                             : 'hover:scale-105'
@@ -284,8 +258,8 @@ export default function LinkedInPostGenerator() {
                         onClick={() => handleTopicToggle(topic.id)}
                         style={{ animationDelay: `${index * 0.1}s` }}
                       >
-                        <span className="mr-3 text-2xl">{topic.icon}</span>
-                        <span className="text-sm font-medium">{topic.label}</span>
+                        <span className="mr-2 text-lg">{topic.icon}</span>
+                        <span className="font-medium">{topic.label}</span>
                       </Button>
                     ))}
                   </div>
@@ -301,74 +275,40 @@ export default function LinkedInPostGenerator() {
                     <Settings className="h-5 w-5 text-primary" />
                     Custom Details
                   </CardTitle>
-                  <p className="text-muted-foreground text-sm">Add specific details to personalize your content</p>
+                  <p className="text-muted-foreground text-sm">Add specific details to personalize topic-based content</p>
                 </CardHeader>
                 <CardContent>
                   <Textarea
-                    placeholder="Add specific details like project names, achievements, or keywords to personalize your post..."
+                    placeholder="Add specific details like project names, achievements, or keywords to personalize topic-based posts..."
                     value={customDetails}
                     onChange={(e) => setCustomDetails(e.target.value)}
-                    rows={4}
+                    rows={3}
                     className="resize-none transition-all focus:ring-2 focus:ring-primary/50"
                   />
                 </CardContent>
               </Card>
             </ScrollReveal>
 
-            {/* Actions */}
+            {/* Generate Button */}
             <ScrollReveal delay={500}>
-              <div className="space-y-4">
-                {/* Generate Button */}
-                <Button 
-                  onClick={generatePost}
-                  disabled={isGenerating || selectedTopics.length === 0}
-                  className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-primary transition-all duration-300 transform hover:scale-105 shadow-glow"
-                  size="lg"
-                >
-                  {isGenerating ? (
-                    <>
-                      <RefreshCw className="mr-2 h-6 w-6 animate-spin" />
-                      Generating Your Post...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-6 w-6" />
-                      Generate LinkedIn Post
-                    </>
-                  )}
-                </Button>
-
-                {/* Connection Actions */}
-                {!isConnected ? (
-                  <Button 
-                    onClick={initiateAuth}
-                    disabled={isConnecting}
-                    variant="outline"
-                    className="w-full h-12 border-linkedin-blue text-linkedin-blue hover:bg-linkedin-blue hover:text-white transition-all duration-300"
-                  >
-                    {isConnecting ? (
-                      <>
-                        <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
-                        Connecting...
-                      </>
-                    ) : (
-                      <>
-                        <Linkedin className="mr-2 h-5 w-5" />
-                        Connect to LinkedIn
-                      </>
-                    )}
-                  </Button>
+              <Button 
+                onClick={generatePost}
+                disabled={isGenerating}
+                className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-primary transition-all duration-300 transform hover:scale-105 shadow-glow"
+                size="lg"
+              >
+                {isGenerating ? (
+                  <>
+                    <RefreshCw className="mr-2 h-6 w-6 animate-spin" />
+                    Generating Your Post...
+                  </>
                 ) : (
-                  <Button 
-                    onClick={publishToLinkedIn}
-                    disabled={!generatedPost}
-                    className="w-full h-12 bg-linkedin-blue hover:bg-linkedin-blue-light transition-all duration-300"
-                  >
-                    <Send className="mr-2 h-5 w-5" />
-                    Publish to LinkedIn
-                  </Button>
+                  <>
+                    <Sparkles className="mr-2 h-6 w-6" />
+                    Generate LinkedIn Post
+                  </>
                 )}
-              </div>
+              </Button>
             </ScrollReveal>
           </div>
 
@@ -390,18 +330,10 @@ export default function LinkedInPostGenerator() {
                     {/* User header */}
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary-glow rounded-full flex items-center justify-center shadow-lg">
-                        {profile?.picture ? (
-                          <img 
-                            src={profile.picture} 
-                            alt="Profile" 
-                            className="w-12 h-12 rounded-full object-cover"
-                          />
-                        ) : (
-                          <User className="h-6 w-6 text-primary-foreground" />
-                        )}
+                        <User className="h-6 w-6 text-primary-foreground" />
                       </div>
                       <div>
-                        <h3 className="font-semibold">{profile?.name || "Your Name"}</h3>
+                        <h3 className="font-semibold">Your Name</h3>
                         <p className="text-sm text-muted-foreground">Your Professional Title</p>
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           2h • <Globe className="w-3 h-3" />
@@ -421,7 +353,7 @@ export default function LinkedInPostGenerator() {
                           <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-50" />
                           Your generated post will appear here...
                           <br />
-                          <span className="text-xs">Select topics and click generate to get started</span>
+                          <span className="text-xs">Add your content or select topics and click generate</span>
                         </div>
                       )}
                     </div>
@@ -442,10 +374,6 @@ export default function LinkedInPostGenerator() {
                           Share
                         </Button>
                       </div>
-                      <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary transition-colors">
-                        <Send className="h-4 w-4 mr-2" />
-                        Send
-                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -458,7 +386,10 @@ export default function LinkedInPostGenerator() {
                 <Card className="card-elevated">
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <CardTitle>Edit Your Post</CardTitle>
+                      <CardTitle className="flex items-center gap-2">
+                        <Edit3 className="h-5 w-5 text-primary" />
+                        Edit & Copy
+                      </CardTitle>
                       <div className="flex items-center gap-2">
                         <Badge 
                           variant={charCount > 1200 ? "destructive" : charCount > 700 ? "secondary" : "default"}
@@ -480,62 +411,17 @@ export default function LinkedInPostGenerator() {
                     
                     {/* Action Buttons */}
                     <div className="grid grid-cols-2 gap-3">
-                      <Button onClick={copyToClipboard} variant="outline" className="transition-all hover:scale-105">
+                      <Button 
+                        onClick={copyToClipboard} 
+                        className="bg-gradient-to-r from-primary to-primary-glow hover:from-primary-glow hover:to-primary transition-all hover:scale-105 shadow-glow"
+                      >
                         <Copy className="mr-2 h-4 w-4" />
-                        Copy
+                        Copy to LinkedIn
                       </Button>
                       <Button onClick={generatePost} variant="outline" className="transition-all hover:scale-105">
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Regenerate
                       </Button>
-                    </div>
-
-                    {/* Email Action */}
-                    <div className="space-y-3">
-                      {!showEmailInput ? (
-                        <Button 
-                          onClick={() => setShowEmailInput(true)} 
-                          variant="outline" 
-                          className="w-full border-primary/20 hover:bg-primary/10 transition-all"
-                        >
-                          <Mail className="mr-2 h-4 w-4" />
-                          Email this Post
-                        </Button>
-                      ) : (
-                        <div className="space-y-3 p-4 border border-primary/20 rounded-lg bg-primary/5">
-                          <Label htmlFor="email">Email Address</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              id="email"
-                              type="email"
-                              placeholder="your@email.com"
-                              value={emailAddress}
-                              onChange={(e) => setEmailAddress(e.target.value)}
-                              className="flex-1"
-                            />
-                            <Button 
-                              onClick={sendEmailNotification} 
-                              disabled={isSending}
-                              size="sm"
-                              className="bg-primary hover:bg-primary-glow"
-                            >
-                              {isSending ? (
-                                <RefreshCw className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Send className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                          <Button 
-                            onClick={() => setShowEmailInput(false)} 
-                            variant="ghost" 
-                            size="sm"
-                            className="w-full text-muted-foreground"
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -552,7 +438,7 @@ export default function LinkedInPostGenerator() {
               <span className="font-medium">Powered by AI Technology</span>
             </div>
             <p className="text-muted-foreground text-sm max-w-md mx-auto">
-              Create professional content that engages your network and builds your personal brand on LinkedIn
+              Transform any content into professional LinkedIn posts. Generate, edit, copy, and share instantly.
             </p>
           </div>
         </ScrollReveal>

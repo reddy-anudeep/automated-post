@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Linkedin, Chrome } from 'lucide-react';
+import { Linkedin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 
@@ -42,24 +42,6 @@ const Auth = () => {
     return () => subscription.unsubscribe();
   }, [navigate, toast]);
 
-  const signInWithGoogle = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/`
-        }
-      });
-
-      if (error) throw error;
-    } catch (error: any) {
-      toast({
-        title: "Authentication Error",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
 
   const signInWithLinkedIn = async () => {
     try {
@@ -93,18 +75,9 @@ const Auth = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <Button
-            onClick={signInWithGoogle}
-            variant="outline"
-            className="w-full h-12 font-medium border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300"
-          >
-            <Chrome className="w-5 h-5 mr-3" />
-            Continue with Google
-          </Button>
-          
-          <Button
             onClick={signInWithLinkedIn}
-            variant="outline"
-            className="w-full h-12 font-medium border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300"
+            variant="default"
+            className="w-full h-12 font-medium bg-gradient-primary text-primary-foreground hover:opacity-90 transition-all duration-300"
           >
             <Linkedin className="w-5 h-5 mr-3" />
             Continue with LinkedIn

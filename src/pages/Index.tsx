@@ -29,10 +29,16 @@ const Index = () => {
   }
 
   if (!isAuthenticated) {
+    console.log('Not authenticated, returning null');
     return null; // Will redirect to auth
   }
 
-  return <LinkedInPostGenerator />;
+  console.log('Authenticated, rendering LinkedInPostGenerator');
+  return (
+    <div>
+      <LinkedInPostGenerator />
+    </div>
+  );
 };
 
 export default Index;

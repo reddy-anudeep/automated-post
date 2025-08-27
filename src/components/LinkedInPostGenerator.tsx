@@ -19,11 +19,13 @@ import {
   Settings,
   Globe,
   FileText,
-  Edit3
+  Edit3,
+  Rss
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ThemeToggle from "@/components/ThemeToggle";
 import ScrollReveal from "@/components/ScrollReveal";
+import { supabase } from "@/integrations/supabase/client";
 
 const topics = [
   { id: "technology", label: "Technology", icon: "💻", color: "from-blue-500 to-cyan-500" },
@@ -35,39 +37,6 @@ const topics = [
   { id: "branding", label: "Personal Branding", icon: "✨", color: "from-pink-500 to-rose-500" },
   { id: "projects", label: "Project Showcase", icon: "🎯", color: "from-teal-500 to-cyan-500" },
 ];
-
-const postTemplates = {
-  technology: [
-    {
-      opening: ["Just discovered", "Been experimenting with", "Spent the weekend exploring", "Recently came across"],
-      hook: ["a game-changing tool", "an innovative solution", "a revolutionary approach", "something that's transforming"],
-      context: ["that's reshaping how we build applications", "that's making developers more productive", "that's solving a problem we've had for years", "that's changing the industry"],
-      reflection: ["Sometimes the best innovations are the simplest ones", "It's amazing how the right tool can transform your workflow", "This is why I love technology - it keeps evolving", "Innovation happens when complexity meets simplicity"],
-      cta: ["What's your favorite development tool?", "Have you tried anything similar?", "What tools have changed your perspective?", "Share your favorite productivity tools below!"],
-      emojis: ["🚀", "💻", "⚡", "🔥", "✨"]
-    }
-  ],
-  ai: [
-    {
-      opening: ["AI isn't replacing creativity", "The future of AI is collaboration", "Spent time experimenting with AI", "AI is becoming our creative partner"],
-      hook: ["it's amplifying human potential", "it's enhancing human intuition", "it's unlocking new possibilities", "it's democratizing innovation"],
-      context: ["The magic happens when humans and AI work together", "We're entering an era of augmented creativity", "The key is finding the right balance", "It's not about replacement, it's about enhancement"],
-      reflection: ["The future belongs to those who embrace this partnership", "We're just scratching the surface of what's possible", "This collaboration is reshaping every industry", "Human creativity + AI capabilities = unlimited potential"],
-      cta: ["How are you using AI in your work?", "What's your take on AI collaboration?", "Share your AI experiences below!", "What AI tools have impressed you?"],
-      emojis: ["🤖", "🎨", "⚡", "🚀", "💡"]
-    }
-  ],
-  entrepreneurship: [
-    {
-      opening: ["Failed my first startup", "Learned the hard way", "Three years ago I made a mistake", "My biggest failure became my greatest teacher"],
-      hook: ["Best thing that ever happened to me", "It changed everything", "It was the wake-up call I needed", "It became my foundation for success"],
-      context: ["That failure taught me more than any course could", "Every setback became a stepping stone", "I learned to see rejection as redirection", "Those lessons became my competitive advantage"],
-      reflection: ["Now I understand that failure is just data", "Success isn't about avoiding failure, it's about learning from it", "The best entrepreneurs are those who've failed and bounced back", "Every 'no' was preparing me for the right 'yes'"],
-      cta: ["What failure changed your perspective?", "Share your comeback story!", "What lessons did failure teach you?", "To fellow entrepreneurs: keep pushing forward!"],
-      emojis: ["💪", "🚀", "📈", "💡", "🔥"]
-    }
-  ]
-};
 
 export default function LinkedInPostGenerator() {
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
@@ -101,100 +70,6 @@ export default function LinkedInPostGenerator() {
     );
   };
 
-const generateUniquePost = (topic: string, templates: any, customDetails?: string) => {
-    const template = templates[0]; // Using first template for now
-    const randomElement = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
-    
-    const opening = randomElement(template.opening);
-    const hook = randomElement(template.hook);
-    const context = randomElement(template.context);
-    const reflection = randomElement(template.reflection);
-    const cta = randomElement(template.cta);
-    const emoji = randomElement(template.emojis);
-    
-    // Replace placeholder content with custom details if provided
-    let finalHook = hook;
-    if (customDetails?.trim()) {
-      finalHook = customDetails.trim();
-    }
-    
-    return `${opening} ${finalHook} ${context} ${emoji}
-
-${reflection}
-
-${cta}
-
-${generateHashtags("", [topic])}`;
-  };
-
-  const transformUserContent = (content: string, topics: string[]) => {
-    // Extract key themes and transform into LinkedIn format
-    const lines = content.split('\n').filter(line => line.trim());
-    
-    // LinkedIn post structures
-    const structures = [
-      // Hook + Story + Lesson + CTA
-      (content: string) => {
-        const hook = `Here's what I learned: ${content.split('.')[0]}.`;
-        const story = lines.slice(1, -1).join('\n\n');
-        const lesson = `The takeaway? ${lines[lines.length - 1] || 'Every experience teaches us something valuable.'}`;
-        const cta = topics.length > 0 ? 
-          `What's your experience with ${topics[0]}?` : 
-          'What are your thoughts on this?';
-        
-        return `${hook}
-
-${story}
-
-${lesson}
-
-${cta}
-
-${generateHashtags(content, topics)}`;
-      },
-      
-      // Problem + Solution + Results + CTA
-      (content: string) => {
-        const problem = `Recently faced a challenge: ${content.substring(0, 100)}...`;
-        const solution = lines.slice(1, 3).join('\n\n');
-        const results = `The outcome exceeded expectations.`;
-        const cta = 'Have you faced similar challenges? Share your solutions!';
-        
-        return `${problem}
-
-${solution}
-
-${results}
-
-${cta}
-
-${generateHashtags(content, topics)}`;
-      },
-      
-      // Insight + Context + Impact + CTA
-      (content: string) => {
-        const insight = `💡 Key insight: ${lines[0]}`;
-        const context = lines.slice(1).join('\n\n');
-        const impact = `This perspective is reshaping how I approach ${topics[0] || 'my work'}.`;
-        const cta = 'What insights have changed your approach recently?';
-        
-        return `${insight}
-
-${context}
-
-${impact}
-
-${cta}
-
-${generateHashtags(content, topics)}`;
-      }
-    ];
-    
-    // Randomly select a structure
-    const selectedStructure = structures[Math.floor(Math.random() * structures.length)];
-    return selectedStructure(content);
-  };
-
   const generatePost = async () => {
     // Check if we have either topics or user content
     if (selectedTopics.length === 0 && !userContent.trim()) {
@@ -208,35 +83,41 @@ ${generateHashtags(content, topics)}`;
 
     setIsGenerating(true);
     
-    // Simulate AI generation with a delay
-    setTimeout(() => {
-      let post = "";
-      
-      // If user provided their own content, transform it into a LinkedIn post
-      if (userContent.trim()) {
-        post = transformUserContent(userContent.trim(), selectedTopics);
-      } else {
-        // Use topic-based generation with templates
-        const primaryTopic = selectedTopics[0];
-        const templates = postTemplates[primaryTopic as keyof typeof postTemplates];
-        
-        if (templates) {
-          post = generateUniquePost(primaryTopic, templates, customDetails);
-        } else {
-          // Fallback for topics without templates
-          post = generateUniquePost("technology", postTemplates.technology, customDetails);
+    try {
+      // Call the Supabase edge function for news-powered generation
+      const { data, error } = await supabase.functions.invoke('generate-news-post', {
+        body: {
+          topics: selectedTopics,
+          userContent: userContent.trim() || undefined,
+          customDetails: customDetails.trim() || undefined
         }
-      }
-      
-      setGeneratedPost(post);
-      setCharCount(post.length);
-      setIsGenerating(false);
-      
-      toast({
-        title: "Post Generated! 🎉",
-        description: "Your unique LinkedIn post is ready to copy and share.",
       });
-    }, 2000);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (data.success && data.post) {
+        setGeneratedPost(data.post);
+        setCharCount(data.post.length);
+        
+        toast({
+          title: "Latest News Post Generated! 📰",
+          description: "Your LinkedIn post based on current events is ready!",
+        });
+      } else {
+        throw new Error('Failed to generate post');
+      }
+    } catch (error: any) {
+      console.error('Error generating post:', error);
+      toast({
+        title: "Generation Error",
+        description: error.message || "Failed to generate post. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const generateHashtags = (content: string, topics: string[]) => {
@@ -313,8 +194,8 @@ ${generateHashtags(content, topics)}`;
         <ScrollReveal className="text-center mb-16">
           <div className="animate-fade-in-up">
             <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6 backdrop-blur-sm">
-              <Zap className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">AI-Powered Content Generation</span>
+              <Rss className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">Live News + AI Content Generation</span>
             </div>
             <h1 className="text-6xl md:text-7xl font-bold mb-6 gradient-text leading-tight">
               LinkedIn Post
@@ -322,7 +203,7 @@ ${generateHashtags(content, topics)}`;
               Generator
             </h1>
             <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              Create engaging, professional LinkedIn posts from your content or topic selection. Generate, edit, and copy to share instantly.
+              Create engaging LinkedIn posts powered by live news and current events. Select topics to get the latest industry updates or transform your own content into professional posts.
             </p>
           </div>
         </ScrollReveal>
@@ -421,12 +302,12 @@ ${generateHashtags(content, topics)}`;
                 {isGenerating ? (
                   <>
                     <RefreshCw className="mr-2 h-6 w-6 animate-spin" />
-                    Generating Your Post...
+                    Fetching Latest News & Generating...
                   </>
                 ) : (
                   <>
-                    <Sparkles className="mr-2 h-6 w-6" />
-                    Generate LinkedIn Post
+                    <Rss className="mr-2 h-6 w-6" />
+                    Generate from Live News
                   </>
                 )}
               </Button>
@@ -559,7 +440,7 @@ ${generateHashtags(content, topics)}`;
               <span className="font-medium">Powered by AI Technology</span>
             </div>
             <p className="text-muted-foreground text-sm max-w-md mx-auto">
-              Transform any content into professional LinkedIn posts. Generate, edit, copy, and share instantly.
+              Create professional LinkedIn posts powered by live news and current events. Generate, edit, copy, and share instantly.
             </p>
           </div>
         </ScrollReveal>

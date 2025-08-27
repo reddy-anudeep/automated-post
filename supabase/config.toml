@@ -1,1 +1,11 @@
 project_id = "fnuxnpjovdzceronqgir"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[functions.generate-news-post]
+verify_jwt = false

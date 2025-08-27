@@ -36,10 +36,37 @@ const topics = [
   { id: "projects", label: "Project Showcase", icon: "🎯", color: "from-teal-500 to-cyan-500" },
 ];
 
-const samplePosts = {
-  technology: "Just discovered an amazing new framework that's changing how we build web applications! 🚀\n\nAfter years of wrestling with complex configurations, this tool makes development feel effortless again. Sometimes the best innovations are the ones that simplify our daily workflows.\n\nWhat's your favorite development tool that changed your perspective?\n\n#WebDevelopment #Technology #Innovation #ProductivityTips",
-  ai: "AI isn't replacing human creativity - it's amplifying it! 🎨\n\nSpent the morning experimenting with AI-powered design tools, and I'm blown away by how they enhance rather than replace human intuition. The key is knowing when to collaborate with AI and when to trust your own instincts.\n\nThe future belongs to those who can dance between human creativity and artificial intelligence.\n\n#ArtificialIntelligence #Creativity #FutureOfWork #Innovation",
-  entrepreneurship: "Failed my first startup at 25. Best thing that ever happened to me. 💪\n\nThat failure taught me more about business, resilience, and customer needs than any MBA could. Every 'no' became a lesson, every setback a stepping stone.\n\nNow running a successful company, and I credit that early failure for everything I know today.\n\nTo all entrepreneurs facing rejection: your breakthrough is one pivot away.\n\n#Entrepreneurship #Failure #GrowthMindset #StartupLife"
+const postTemplates = {
+  technology: [
+    {
+      opening: ["Just discovered", "Been experimenting with", "Spent the weekend exploring", "Recently came across"],
+      hook: ["a game-changing tool", "an innovative solution", "a revolutionary approach", "something that's transforming"],
+      context: ["that's reshaping how we build applications", "that's making developers more productive", "that's solving a problem we've had for years", "that's changing the industry"],
+      reflection: ["Sometimes the best innovations are the simplest ones", "It's amazing how the right tool can transform your workflow", "This is why I love technology - it keeps evolving", "Innovation happens when complexity meets simplicity"],
+      cta: ["What's your favorite development tool?", "Have you tried anything similar?", "What tools have changed your perspective?", "Share your favorite productivity tools below!"],
+      emojis: ["🚀", "💻", "⚡", "🔥", "✨"]
+    }
+  ],
+  ai: [
+    {
+      opening: ["AI isn't replacing creativity", "The future of AI is collaboration", "Spent time experimenting with AI", "AI is becoming our creative partner"],
+      hook: ["it's amplifying human potential", "it's enhancing human intuition", "it's unlocking new possibilities", "it's democratizing innovation"],
+      context: ["The magic happens when humans and AI work together", "We're entering an era of augmented creativity", "The key is finding the right balance", "It's not about replacement, it's about enhancement"],
+      reflection: ["The future belongs to those who embrace this partnership", "We're just scratching the surface of what's possible", "This collaboration is reshaping every industry", "Human creativity + AI capabilities = unlimited potential"],
+      cta: ["How are you using AI in your work?", "What's your take on AI collaboration?", "Share your AI experiences below!", "What AI tools have impressed you?"],
+      emojis: ["🤖", "🎨", "⚡", "🚀", "💡"]
+    }
+  ],
+  entrepreneurship: [
+    {
+      opening: ["Failed my first startup", "Learned the hard way", "Three years ago I made a mistake", "My biggest failure became my greatest teacher"],
+      hook: ["Best thing that ever happened to me", "It changed everything", "It was the wake-up call I needed", "It became my foundation for success"],
+      context: ["That failure taught me more than any course could", "Every setback became a stepping stone", "I learned to see rejection as redirection", "Those lessons became my competitive advantage"],
+      reflection: ["Now I understand that failure is just data", "Success isn't about avoiding failure, it's about learning from it", "The best entrepreneurs are those who've failed and bounced back", "Every 'no' was preparing me for the right 'yes'"],
+      cta: ["What failure changed your perspective?", "Share your comeback story!", "What lessons did failure teach you?", "To fellow entrepreneurs: keep pushing forward!"],
+      emojis: ["💪", "🚀", "📈", "💡", "🔥"]
+    }
+  ]
 };
 
 export default function LinkedInPostGenerator() {
@@ -74,6 +101,100 @@ export default function LinkedInPostGenerator() {
     );
   };
 
+const generateUniquePost = (topic: string, templates: any, customDetails?: string) => {
+    const template = templates[0]; // Using first template for now
+    const randomElement = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+    
+    const opening = randomElement(template.opening);
+    const hook = randomElement(template.hook);
+    const context = randomElement(template.context);
+    const reflection = randomElement(template.reflection);
+    const cta = randomElement(template.cta);
+    const emoji = randomElement(template.emojis);
+    
+    // Replace placeholder content with custom details if provided
+    let finalHook = hook;
+    if (customDetails?.trim()) {
+      finalHook = customDetails.trim();
+    }
+    
+    return `${opening} ${finalHook} ${context} ${emoji}
+
+${reflection}
+
+${cta}
+
+${generateHashtags("", [topic])}`;
+  };
+
+  const transformUserContent = (content: string, topics: string[]) => {
+    // Extract key themes and transform into LinkedIn format
+    const lines = content.split('\n').filter(line => line.trim());
+    
+    // LinkedIn post structures
+    const structures = [
+      // Hook + Story + Lesson + CTA
+      (content: string) => {
+        const hook = `Here's what I learned: ${content.split('.')[0]}.`;
+        const story = lines.slice(1, -1).join('\n\n');
+        const lesson = `The takeaway? ${lines[lines.length - 1] || 'Every experience teaches us something valuable.'}`;
+        const cta = topics.length > 0 ? 
+          `What's your experience with ${topics[0]}?` : 
+          'What are your thoughts on this?';
+        
+        return `${hook}
+
+${story}
+
+${lesson}
+
+${cta}
+
+${generateHashtags(content, topics)}`;
+      },
+      
+      // Problem + Solution + Results + CTA
+      (content: string) => {
+        const problem = `Recently faced a challenge: ${content.substring(0, 100)}...`;
+        const solution = lines.slice(1, 3).join('\n\n');
+        const results = `The outcome exceeded expectations.`;
+        const cta = 'Have you faced similar challenges? Share your solutions!';
+        
+        return `${problem}
+
+${solution}
+
+${results}
+
+${cta}
+
+${generateHashtags(content, topics)}`;
+      },
+      
+      // Insight + Context + Impact + CTA
+      (content: string) => {
+        const insight = `💡 Key insight: ${lines[0]}`;
+        const context = lines.slice(1).join('\n\n');
+        const impact = `This perspective is reshaping how I approach ${topics[0] || 'my work'}.`;
+        const cta = 'What insights have changed your approach recently?';
+        
+        return `${insight}
+
+${context}
+
+${impact}
+
+${cta}
+
+${generateHashtags(content, topics)}`;
+      }
+    ];
+    
+    // Randomly select a structure
+    const selectedStructure = structures[Math.floor(Math.random() * structures.length)];
+    return selectedStructure(content);
+  };
+
   const generatePost = async () => {
     // Check if we have either topics or user content
     if (selectedTopics.length === 0 && !userContent.trim()) {
@@ -91,19 +212,19 @@ export default function LinkedInPostGenerator() {
     setTimeout(() => {
       let post = "";
       
-      // If user provided their own content, use that as base
+      // If user provided their own content, transform it into a LinkedIn post
       if (userContent.trim()) {
-        // Transform user content into a professional LinkedIn post
-        const content = userContent.trim();
-        post = `${content}\n\n${generateHashtags(content, selectedTopics)}`;
+        post = transformUserContent(userContent.trim(), selectedTopics);
       } else {
-        // Use topic-based generation
+        // Use topic-based generation with templates
         const primaryTopic = selectedTopics[0];
-        post = samplePosts[primaryTopic as keyof typeof samplePosts] || samplePosts.technology;
+        const templates = postTemplates[primaryTopic as keyof typeof postTemplates];
         
-        // If custom details are provided, customize the post
-        if (customDetails.trim()) {
-          post = post.replace(/amazing new framework|AI-powered design tools|first startup/g, customDetails.trim());
+        if (templates) {
+          post = generateUniquePost(primaryTopic, templates, customDetails);
+        } else {
+          // Fallback for topics without templates
+          post = generateUniquePost("technology", postTemplates.technology, customDetails);
         }
       }
       
@@ -113,7 +234,7 @@ export default function LinkedInPostGenerator() {
       
       toast({
         title: "Post Generated! 🎉",
-        description: "Your LinkedIn post is ready to copy and share.",
+        description: "Your unique LinkedIn post is ready to copy and share.",
       });
     }, 2000);
   };

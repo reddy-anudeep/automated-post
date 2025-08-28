@@ -20,11 +20,6 @@ const serve_handler = async (req: Request): Promise<Response> => {
   try {
     const { topics, userContent, customDetails }: NewsRequest = await req.json();
     
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OpenAI API key not configured');
-    }
-
     console.log('Generating post for topics:', topics, 'userContent:', userContent);
 
     let newsContent = '';
@@ -54,7 +49,7 @@ const serve_handler = async (req: Request): Promise<Response> => {
       newsContent = await fetchLatestNews(searchQuery);
     }
 
-    // Generate LinkedIn post using OpenAI
+    // Generate LinkedIn post with local content generation
     const linkedInPost = await generateLinkedInPost(newsContent, topics, customDetails);
 
     console.log('Generated LinkedIn post:', linkedInPost);
@@ -142,58 +137,73 @@ function generateSimulatedNews(searchQuery: string): string {
 }
 
 async function generateLinkedInPost(newsContent: string, topics: string[], customDetails?: string): Promise<string> {
-  const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+  // Always use local generation for now to ensure reliability
+  return generateLocalLinkedInPost(newsContent, topics, customDetails);
+}
+
+function generateLocalLinkedInPost(newsContent: string, topics: string[], customDetails?: string): string {
+  const hooks = [
+    "🚀 Just came across something fascinating...",
+    "💡 Here's what caught my attention today:",
+    "🔥 Breaking: This could change everything!",
+    "⚡ Quick insight that's worth sharing:",
+    "🎯 Something interesting happening in",
+    "📈 The latest trends show that",
+    "🌟 Exciting development alert!"
+  ];
+
+  const callToActions = [
+    "What's your take on this?",
+    "How do you see this impacting your industry?",
+    "What are your thoughts?",
+    "Are you seeing similar trends?",
+    "How is your organization adapting?",
+    "What's been your experience?",
+    "Would love to hear your perspective!"
+  ];
+
+  const hashtags = {
+    technology: ["#Technology", "#Innovation", "#DigitalTransformation", "#TechTrends"],
+    ai: ["#AI", "#ArtificialIntelligence", "#MachineLearning", "#Innovation"],
+    entrepreneurship: ["#Entrepreneurship", "#StartupLife", "#Business", "#Innovation"],
+    leadership: ["#Leadership", "#Management", "#ProfessionalGrowth", "#TeamBuilding"],
+    career: ["#CareerGrowth", "#ProfessionalDevelopment", "#CareerTips", "#Skills"],
+    trends: ["#IndustryTrends", "#Business", "#MarketInsights", "#Innovation"],
+    branding: ["#PersonalBranding", "#Marketing", "#Brand", "#ContentStrategy"],
+    projects: ["#ProjectManagement", "#Productivity", "#Success", "#Innovation"]
+  };
+
+  // Select random elements
+  const hook = hooks[Math.floor(Math.random() * hooks.length)];
+  const cta = callToActions[Math.floor(Math.random() * callToActions.length)];
   
-  const systemPrompt = `You are an expert LinkedIn content creator who transforms news and information into engaging, professional LinkedIn posts. Your posts should:
+  // Get hashtags for primary topic
+  const primaryTopic = topics[0] || 'business';
+  const topicHashtags = hashtags[primaryTopic as keyof typeof hashtags] || ["#Business", "#Professional", "#Growth", "#Success"];
+  const selectedHashtags = topicHashtags.slice(0, 3).join(" ");
 
-1. Start with a compelling hook or insight
-2. Include relevant context and personal perspective
-3. End with a thought-provoking question or call-to-action
-4. Use appropriate emojis sparingly (1-2 max)
-5. Include 3-4 relevant hashtags
-6. Be between 150-300 words
-7. Sound human, authentic, and conversational
-8. Avoid overly promotional language
-
-Focus on making the content relatable and actionable for professionals. If custom details are provided, weave them naturally into the post.`;
-
-  const userPrompt = `Transform this news/content into an engaging LinkedIn post:
-
-Content: ${newsContent}
-
-Topics focus: ${topics.join(', ')}
-${customDetails ? `Custom details to include: ${customDetails}` : ''}
-
-Make it sound like a human professional sharing genuine insights, not an AI-generated post. Keep it fresh, relevant, and engaging.`;
-
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        max_tokens: 500,
-        temperature: 0.8,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.choices[0].message.content.trim();
-  } catch (error) {
-    console.error('Error generating LinkedIn post:', error);
-    throw new Error('Failed to generate LinkedIn post');
+  // Create the post
+  let post = `${hook}\n\n`;
+  
+  // Add processed news content
+  const processedContent = newsContent.length > 200 ? 
+    newsContent.substring(0, 200) + "..." : 
+    newsContent;
+  
+  post += `${processedContent}\n\n`;
+  
+  // Add custom details if provided
+  if (customDetails) {
+    post += `From my perspective: ${customDetails}\n\n`;
   }
+  
+  // Add call to action
+  post += `${cta}\n\n`;
+  
+  // Add hashtags
+  post += selectedHashtags;
+
+  return post;
 }
 
 serve(serve_handler);
